@@ -543,7 +543,7 @@ async function startRecording() {
     recTime.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   }, 250);
 
-  btnRec.textContent = "■ 녹화 정지 · 저장";
+  btnRec.textContent = "■ 녹화 정지";
   btnRec.classList.add("recording");
   fRec.classList.add("recording");
 }

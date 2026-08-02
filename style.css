@@ -242,7 +242,9 @@ button.recording {
   color: #fff;
 }
 
+/* 글자가 줄바꿈되면 버튼 높이가 달라져 아래가 밀린다 */
 .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.row button { white-space: nowrap; }
 
 .field { display: block; font-size: 12px; color: var(--muted); }
 .field[hidden] { display: none; }
