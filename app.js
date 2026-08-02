@@ -296,10 +296,16 @@ btnStart.addEventListener("click", async () => {
 });
 
 // GPU 연산이 통하지 않는 기기가 있다. 그런 이용자가 올 때마다 다시 켜지 않도록
-// 선택을 기억해 둔다. 기본값은 GPU다. CPU 연산은 3배 가까이 느리다.
+// 선택을 기억해 둔다.
+//
+// 데스크톱은 GPU가 기본이다. CPU 연산은 3배 가까이 느리다.
+// 다만 휴대폰은 GPU 연산이 아무것도 못 알아보는 사례가 잦아 CPU를 기본으로 둔다.
+// 느려도 인식되는 편이 빠르지만 안 되는 것보다 낫다. 원하면 끌 수 있다.
+const isMobile = matchMedia("(pointer: coarse)").matches && matchMedia("(max-width: 900px)").matches;
 try {
-  if (localStorage.getItem("cpuMode") === "1") cpuModeEl.checked = true;
-} catch { /* 저장소를 쓸 수 없는 환경은 그냥 넘어간다 */ }
+  const saved = localStorage.getItem("cpuMode");
+  cpuModeEl.checked = saved === null ? isMobile : saved === "1";
+} catch { cpuModeEl.checked = isMobile; }
 
 // GPU/CPU 전환 — 만들어 둔 추론기를 모두 버리고 다시 만든다
 cpuModeEl.addEventListener("change", async () => {
