@@ -72,7 +72,10 @@ const canSpeak = typeof speechSynthesis !== "undefined" &&
 let speechOk = canSpeak ? null : false;   // null = 아직 모름
 let onNoSpeech = null;
 
-/** 음성을 못 쓴다는 것이 확인되면 한 번 알려 준다 */
+// 못 쓴다고 판단했다가 뒤늦게 발음이 나오면 안내를 거둬야 한다
+let noticeShown = false;
+
+/** 음성을 쓸 수 있는지가 판가름 나면 알려 준다 (인자: 쓸 수 있는가) */
 export function whenSpeechUnavailable(cb) { onNoSpeech = cb; }
 
 /** 음성 목록은 늦게 채워지고, 첫 발음은 이용자 조작 중에 깨워 둬야 잘 나온다 */
@@ -88,7 +91,33 @@ function giveUpSpeech(freq) {
   if (speechOk === false) return tone(freq);
   speechOk = false;
   tone(freq);
-  onNoSpeech?.();
+  noticeShown = true;
+  onNoSpeech?.(false);
+}
+
+/** 발음이 실제로 시작됐다 — 잘못 내린 판단이 있었다면 되돌린다 */
+function speechStarted() {
+  speechOk = true;
+  if (noticeShown) {
+    noticeShown = false;
+    onNoSpeech?.(true);
+  }
+}
+
+/** 소리가 시작되기를 기다린다.
+ *
+ *  발음을 맡은 엔진이 처음 깨어날 때는 1초 넘게 걸리기도 한다. 시간만 재고
+ *  포기하면 뒤늦게 나온 발음과 대신 낸 음이 겹쳐 들린다. 그래서 시간이 아니라
+ *  '발음을 준비하고 있는가'를 보고, 준비 중이면 계속 기다린다. 카카오톡처럼
+ *  speak()를 무시하는 브라우저는 준비 중이지도 않으므로 바로 걸러진다. */
+function waitForSpeech(freq, tries = 0) {
+  if (speechOk !== null) return;                       // 이미 판가름 났다
+  const 준비중 = speechSynthesis.speaking || speechSynthesis.pending;
+  if (준비중 && tries < 8) {
+    setTimeout(() => waitForSpeech(freq, tries + 1), 500);
+    return;
+  }
+  giveUpSpeech(freq);
 }
 
 function speak(char, fallbackFreq) {
@@ -100,13 +129,11 @@ function speak(char, fallbackFreq) {
     u.lang = /[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(char) ? "ko-KR" : "en-US";
     u.rate = 0.85;
     u.pitch = 1.15;
-    u.onstart = () => { speechOk = true; };
+    u.onstart = speechStarted;
     u.onerror = () => giveUpSpeech(fallbackFreq);
     speechSynthesis.speak(u);
-    // 아직 한 번도 소리가 난 적이 없다면, 시작하는지 확인한다
-    if (speechOk === null) {
-      setTimeout(() => { if (speechOk === null) giveUpSpeech(fallbackFreq); }, 600);
-    }
+    // 아직 한 번도 소리가 난 적이 없다면, 시작하는지 지켜본다
+    if (speechOk === null) setTimeout(() => waitForSpeech(fallbackFreq), 700);
   } catch {
     giveUpSpeech(fallbackFreq);
   }
