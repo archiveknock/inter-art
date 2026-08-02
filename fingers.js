@@ -88,6 +88,9 @@ export function primeSpeech() {
 }
 
 function giveUpSpeech(freq) {
+  // 한 번이라도 제대로 발음된 브라우저라면 계속 발음으로 간다.
+  // 그 뒤에 나는 오류는 이 브라우저가 못 읽어서가 아니라 그때의 사정일 뿐이다.
+  if (speechOk === true) return;
   if (speechOk === false) return tone(freq);
   speechOk = false;
   tone(freq);
@@ -130,7 +133,11 @@ function speak(char, fallbackFreq) {
     u.rate = 0.85;
     u.pitch = 1.15;
     u.onstart = speechStarted;
-    u.onerror = () => giveUpSpeech(fallbackFreq);
+    // 연달아 짚어 앞 발음을 끊으면 그 발음에 오류가 뜬다. 이는 고장이 아니다.
+    u.onerror = (e) => {
+      if (e?.error === "interrupted" || e?.error === "canceled") return;
+      giveUpSpeech(fallbackFreq);
+    };
     speechSynthesis.speak(u);
     // 아직 한 번도 소리가 난 적이 없다면, 시작하는지 지켜본다
     if (speechOk === null) setTimeout(() => waitForSpeech(fallbackFreq), 700);
