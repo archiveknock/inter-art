@@ -39,12 +39,22 @@ export function fxOut() {
   return master;
 }
 
-/** 녹화에 실을 오디오 스트림 (효과음 + 켜져 있으면 마이크) */
+/** 녹화에 실을 오디오 스트림 (효과음 + 켜져 있으면 마이크)
+ *
+ *  소리가 한동안 없으면 브라우저가 오디오 처리를 쉬게 두고, 그러면 녹화의
+ *  오디오 트랙이 그 지점에서 끊긴다. 영상만 계속 이어지니 파일을 열면 소리와
+ *  화면이 어긋난다. 그래서 들리지 않을 만큼 작은 소리를 계속 흘려 보내
+ *  오디오가 멈추지 않게 붙잡아 둔다. */
 export function recordStream() {
   if (!dest) {
     const a = ac();
     dest = a.createMediaStreamDestination();
     fxOut().connect(dest);
+
+    const keep = a.createConstantSource();
+    keep.offset.value = 1e-5;   // 사람 귀에는 완전한 무음이다
+    keep.connect(dest);
+    keep.start();
   }
   return dest.stream;
 }
