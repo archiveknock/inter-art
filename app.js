@@ -5,7 +5,9 @@ import {
 } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1";
 
 import { RoachGame, fingertipsOf } from "./roaches.js";
-import { FingerMessage, FingerMelody } from "./fingers.js";
+import {
+  FingerMessage, FingerMelody, primeSpeech, whenSpeechUnavailable,
+} from "./fingers.js";
 import {
   recordStream, attachMic, detachMic,
   attachTabAudio, detachTabAudio, canCaptureTab,
@@ -253,9 +255,17 @@ function stopCamera() {
   setStatus("카메라가 꺼져 있습니다");
 }
 
+// 음성 합성이 없는 앱 안 브라우저(카카오톡 등)에서는 음으로 대신하므로,
+// 왜 멜로디처럼 들리는지 한 번 알려 준다
+whenSpeechUnavailable(() => {
+  note("이 브라우저는 글자 읽어주기를 지원하지 않아 음으로 대신합니다. " +
+       "기본 브라우저에서 열면 소리로 읽어 줍니다.");
+});
+
 btnStart.addEventListener("click", async () => {
   if (running) return stopCamera();
 
+  primeSpeech();   // 첫 발음은 이용자 조작 중에 깨워 둬야 잘 나온다
   btnStart.disabled = true;
   setStatus("카메라 권한 요청 중…");
   try {

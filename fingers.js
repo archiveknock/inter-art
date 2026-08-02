@@ -62,11 +62,37 @@ function tone(freq) {
 }
 
 // 글자를 음성으로 읽는다. 음성 합성을 못 쓰면 음으로 대신한다.
+//
+// 기능이 있다고 해서 실제로 소리가 나는 것은 아니다. 카카오톡 같은 앱 안의
+// 브라우저에서는 speak()를 불러도 아무 일이 일어나지 않는 경우가 있어,
+// 소리가 시작되는지 지켜보고 안 나면 음으로 넘어간다.
 const canSpeak = typeof speechSynthesis !== "undefined" &&
   typeof SpeechSynthesisUtterance !== "undefined";
 
+let speechOk = canSpeak ? null : false;   // null = 아직 모름
+let onNoSpeech = null;
+
+/** 음성을 못 쓴다는 것이 확인되면 한 번 알려 준다 */
+export function whenSpeechUnavailable(cb) { onNoSpeech = cb; }
+
+/** 음성 목록은 늦게 채워지고, 첫 발음은 이용자 조작 중에 깨워 둬야 잘 나온다 */
+export function primeSpeech() {
+  if (!canSpeak) return;
+  try {
+    speechSynthesis.getVoices();
+    speechSynthesis.resume();
+  } catch { /* 무시 */ }
+}
+
+function giveUpSpeech(freq) {
+  if (speechOk === false) return tone(freq);
+  speechOk = false;
+  tone(freq);
+  onNoSpeech?.();
+}
+
 function speak(char, fallbackFreq) {
-  if (!canSpeak) return tone(fallbackFreq);
+  if (speechOk === false) return tone(fallbackFreq);
   try {
     // 연달아 짚어도 밀리지 않도록 이전 발음을 끊는다
     if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
@@ -74,9 +100,15 @@ function speak(char, fallbackFreq) {
     u.lang = /[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(char) ? "ko-KR" : "en-US";
     u.rate = 0.85;
     u.pitch = 1.15;
+    u.onstart = () => { speechOk = true; };
+    u.onerror = () => giveUpSpeech(fallbackFreq);
     speechSynthesis.speak(u);
+    // 아직 한 번도 소리가 난 적이 없다면, 시작하는지 확인한다
+    if (speechOk === null) {
+      setTimeout(() => { if (speechOk === null) giveUpSpeech(fallbackFreq); }, 600);
+    }
   } catch {
-    tone(fallbackFreq);
+    giveUpSpeech(fallbackFreq);
   }
 }
 
