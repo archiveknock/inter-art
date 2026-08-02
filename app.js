@@ -295,8 +295,16 @@ btnStart.addEventListener("click", async () => {
   }
 });
 
+// GPU 연산이 통하지 않는 기기가 있다. 그런 이용자가 올 때마다 다시 켜지 않도록
+// 선택을 기억해 둔다. 기본값은 GPU다. CPU 연산은 3배 가까이 느리다.
+try {
+  if (localStorage.getItem("cpuMode") === "1") cpuModeEl.checked = true;
+} catch { /* 저장소를 쓸 수 없는 환경은 그냥 넘어간다 */ }
+
 // GPU/CPU 전환 — 만들어 둔 추론기를 모두 버리고 다시 만든다
 cpuModeEl.addEventListener("change", async () => {
+  try { localStorage.setItem("cpuMode", cpuModeEl.checked ? "1" : "0"); } catch { /* 무시 */ }
+
   for (const kind of Object.keys(tasks)) {
     try { tasks[kind]?.close?.(); } catch { /* 정리 실패는 무시 */ }
     delete tasks[kind];
