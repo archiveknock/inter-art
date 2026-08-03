@@ -419,7 +419,7 @@ export function start(effect) {
           pray.draw(ctx, video, W, H, hands, ts);
         } else if (effect === "undo") {
           const hands = detectOf(MAIN);
-          reportDetection(hands.landmarks?.length ?? 0, "손");
+          reportDetection(hands.landmarks?.length ?? 0, "검지");
           undo.draw(ctx, video, W, H, hands, ts);
         } else {
           const tips = fingertipsOf(detectOf(MAIN), W, H);

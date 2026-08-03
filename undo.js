@@ -78,17 +78,18 @@ function drainTone() {
 
 /* ── 손 ──────────────────────────────────────────────── */
 
-const PALM = [0, 5, 9, 13, 17];
-
-/** 손바닥 한가운데와 크기 (화면 좌표) */
-export function palmsOf(handResult, W, H) {
+/** 검지 끝과 닿는 범위 (화면 좌표)
+ *
+ *  손바닥 전체로 훑으면 너무 쉽게 쓸어 담긴다. 검지 하나로 콕 집어야
+ *  모으는 맛이 난다. 범위는 손 크기를 따라가므로 멀리 서면 좁아진다. */
+export function tipsOf(handResult, W, H) {
   const out = [];
   for (const lm of (handResult?.landmarks ?? []).slice(0, 2)) {
-    let cx = 0, cy = 0;
-    for (const i of PALM) { cx += sx(lm[i].x * W, W); cy += sy(lm[i].y * H, H); }
+    const p = lm[8];   // 검지 끝
+    if (!p) continue;
     const size = len(Math.hypot((lm[9].x - lm[0].x) * W, (lm[9].y - lm[0].y) * H));
     if (!size) continue;
-    out.push({ x: cx / PALM.length, y: cy / PALM.length, r: size * 1.25 });
+    out.push({ x: sx(p.x * W, W), y: sy(p.y * H, H), r: size * 0.42 });
   }
   return out;
 }
@@ -145,25 +146,31 @@ function drawKey(ctx, k, t) {
   ctx.restore();
 }
 
-/** 손이 닿는 자리를 옅게 보여 준다 */
-function drawHand(ctx, p, t) {
+/** 검지 끝이 닿는 자리 */
+function drawTip(ctx, p, t) {
   ctx.save();
-  const pulse = 1 + Math.sin(t / 300) * 0.05;
-  const g = ctx.createRadialGradient(p.x, p.y, p.r * 0.2, p.x, p.y, p.r * pulse);
-  g.addColorStop(0, "rgba(34,211,238,0.16)");
+  const pulse = 1 + Math.sin(t / 300) * 0.07;
+
+  const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 1.6);
+  g.addColorStop(0, "rgba(103,232,249,0.4)");
   g.addColorStop(1, "rgba(34,211,238,0)");
   ctx.fillStyle = g;
   ctx.beginPath();
-  ctx.arc(p.x, p.y, p.r * pulse, 0, Math.PI * 2);
+  ctx.arc(p.x, p.y, p.r * 1.6, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.strokeStyle = "rgba(103,232,249,0.55)";
-  ctx.lineWidth = Math.max(1.5, p.r * 0.045);
-  ctx.setLineDash([p.r * 0.45, p.r * 0.35]);
+  ctx.strokeStyle = "rgba(103,232,249,0.85)";
+  ctx.lineWidth = Math.max(1.5, p.r * 0.12);
+  ctx.setLineDash([p.r * 0.6, p.r * 0.45]);
   ctx.beginPath();
-  ctx.arc(p.x, p.y, p.r * pulse, t / 1400, t / 1400 + Math.PI * 2);
+  ctx.arc(p.x, p.y, p.r * pulse, t / 1200, t / 1200 + Math.PI * 2);
   ctx.stroke();
   ctx.setLineDash([]);
+
+  ctx.fillStyle = "rgba(224,252,255,0.95)";
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, p.r * 0.2, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }
 
@@ -348,7 +355,7 @@ export class UndoStation {
     });
   }
 
-  update(dt, W, H, palms, t) {
+  update(dt, W, H, tips, t) {
     const sec = dt / 1000;
 
     // 메시지가 떠 있는 동안엔 칸이 0.11초에 하나씩 꺼진다
@@ -385,9 +392,9 @@ export class UndoStation {
       const k = this.keys[i];
       k.fade = Math.min(1, k.fade + sec * 2.5);
 
-      // 손에 닿으면 빨려 들어간다
+      // 검지 끝이 닿으면 빨려 들어간다
       let caught = false;
-      for (const p of palms) {
+      for (const p of tips) {
         if (Math.hypot(k.x - p.x, k.y - p.y) < p.r + k.r * 0.8) { caught = true; break; }
       }
       if (caught) {
@@ -480,14 +487,14 @@ export class UndoStation {
     const dt = Math.min(64, this.last ? t - this.last : 16);
     this.last = t;
 
-    const palms = palmsOf(handResult, W, H);
-    this.update(dt, W, H, palms, t);
+    const tips = tipsOf(handResult, W, H);
+    this.update(dt, W, H, tips, t);
 
     // 이후로는 미러를 풀고 화면 좌표에서 그린다 (글자가 뒤집히지 않도록)
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-    for (const p of palms) drawHand(ctx, p, t);
+    for (const p of tips) drawTip(ctx, p, t);
     for (const k of this.keys) drawKey(ctx, k, t);
 
     for (const s of this.sparks) {
