@@ -43,6 +43,26 @@ function click() {
   } catch { /* 소리는 실패해도 진행에 영향 없음 */ }
 }
 
+/** 저장됨 — 두 음이 밝게 올라간다 */
+function successTone() {
+  try {
+    const a = ac();
+    const t = a.currentTime;
+    [[659.25, 0], [987.77, 0.11]].forEach(([f, at]) => {
+      const osc = a.createOscillator();
+      osc.type = "sine";
+      osc.frequency.value = f;
+      const gain = a.createGain();
+      gain.gain.setValueAtTime(0.0001, t + at);
+      gain.gain.exponentialRampToValueAtTime(0.24, t + at + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + at + 0.4);
+      osc.connect(gain).connect(fxOut());
+      osc.start(t + at);
+      osc.stop(t + at + 0.44);
+    });
+  } catch { /* 무시 */ }
+}
+
 /** 응답 없음 — 두 음이 내려앉는 시스템 오류음 */
 function errorTone() {
   try {
@@ -75,11 +95,11 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-/** Save 버튼 — 눌리면 살짝 가라앉고, 얼어붙으면 잿빛이 된다 */
-function drawButton(btn, ctx, { pressed = false, dead = false } = {}) {
+/** Save 버튼 — 눌리면 살짝 가라앉고, 얼어붙으면 잿빛, 저장되면 초록이 된다 */
+function drawButton(btn, ctx, { pressed = false, dead = false, done = false } = {}) {
   const { x, y, w, h } = btn;
   const r = h * 0.28;
-  const sink = pressed ? h * 0.06 : 0;
+  const sink = pressed || done ? h * 0.06 : 0;
 
   ctx.save();
   ctx.translate(0, sink);
@@ -94,6 +114,9 @@ function drawButton(btn, ctx, { pressed = false, dead = false } = {}) {
   if (dead) {
     face.addColorStop(0, "#9aa3ad");
     face.addColorStop(1, "#767f89");
+  } else if (done) {
+    face.addColorStop(0, "#4ade80");
+    face.addColorStop(1, "#16a34a");
   } else if (pressed) {
     face.addColorStop(0, "#0ea5b7");
     face.addColorStop(1, "#0891b2");
@@ -123,8 +146,8 @@ function drawButton(btn, ctx, { pressed = false, dead = false } = {}) {
   ctx.font = `700 ${fs}px ${FONT}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillStyle = dead ? "#e8ecf1" : "#05242c";
-  ctx.fillText("💾  Save", x + w / 2, y + h / 2 + fs * 0.04);
+  ctx.fillStyle = dead ? "#e8ecf1" : done ? "#042513" : "#05242c";
+  ctx.fillText(done ? "✓  저장됨" : "💾  Save", x + w / 2, y + h / 2 + fs * 0.04);
   ctx.restore();
 }
 
@@ -163,9 +186,10 @@ function drawCursor(ctx, x, y, s, busy, t) {
   ctx.restore();
 }
 
-/** 응답 없음 대화상자 */
-function drawDialog(ctx, W, H, box, t, k) {
+/** 결과 대화상자 — 응답 없음이거나 저장됨이거나 */
+function drawDialog(ctx, W, H, box, t, k, kind) {
   const { x, y, w, h } = box;
+  const ok = kind === "saved";
 
   ctx.save();
   // 뜰 때 살짝 커지며 나타난다
@@ -196,7 +220,7 @@ function drawDialog(ctx, W, H, box, t, k) {
   ctx.textAlign = "left";
   ctx.font = `600 ${bar * 0.44}px ${FONT}`;
   ctx.fillStyle = "#39414d";
-  ctx.fillText("저장 — 응답 없음", x + w * 0.035, y + bar / 2);
+  ctx.fillText(ok ? "저장 — 완료" : "저장 — 응답 없음", x + w * 0.035, y + bar / 2);
 
   // 닫기 단추 (눌리지 않는다)
   ctx.font = `600 ${bar * 0.42}px ${FONT}`;
@@ -204,34 +228,53 @@ function drawDialog(ctx, W, H, box, t, k) {
   ctx.textAlign = "right";
   ctx.fillText("✕", x + w - w * 0.035, y + bar / 2);
 
-  // 도는 대기 표시
   const cx = x + w * 0.13, cy = y + bar + (h - bar) * 0.4, r = h * 0.11;
-  ctx.lineWidth = r * 0.42;
-  ctx.strokeStyle = "#c9d1da";
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.strokeStyle = "#0ea5c4";
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, t / 190, t / 190 + 1.7);
-  ctx.stroke();
-  ctx.lineCap = "butt";
+  if (ok) {
+    // 초록 동그라미 안의 체크
+    ctx.fillStyle = "#16a34a";
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = r * 0.28;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.42, cy + r * 0.02);
+    ctx.lineTo(cx - r * 0.1, cy + r * 0.38);
+    ctx.lineTo(cx + r * 0.46, cy - r * 0.36);
+    ctx.stroke();
+    ctx.lineCap = "butt";
+  } else {
+    // 도는 대기 표시
+    ctx.lineWidth = r * 0.42;
+    ctx.strokeStyle = "#c9d1da";
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = "#0ea5c4";
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, t / 190, t / 190 + 1.7);
+    ctx.stroke();
+    ctx.lineCap = "butt";
+  }
 
   ctx.textAlign = "left";
   ctx.font = `600 ${h * 0.13}px ${FONT}`;
   ctx.fillStyle = "#20262e";
-  ctx.fillText("이 프로그램이 응답하지 않습니다", x + w * 0.24, cy - h * 0.06);
+  ctx.fillText(ok ? "저장했습니다" : "이 프로그램이 응답하지 않습니다", x + w * 0.24, cy - h * 0.06);
   ctx.font = `400 ${h * 0.105}px ${FONT}`;
   ctx.fillStyle = "#5d6570";
-  ctx.fillText("저장하지 못한 작업은 사라집니다.", x + w * 0.24, cy + h * 0.1);
+  ctx.fillText(ok ? "변경한 내용이 파일에 반영되었습니다." : "저장하지 못한 작업은 사라집니다.",
+    x + w * 0.24, cy + h * 0.1);
 
-  // 아래 단추 두 개
+  // 아래 단추
   const bw = w * 0.27, bh = h * 0.18, by = y + h - bh - h * 0.09;
-  const labels = ["프로그램 닫기", "기다리기"];
+  const labels = ok ? ["확인"] : ["프로그램 닫기", "기다리기"];
   labels.forEach((label, i) => {
-    const bx = x + w - (bw + w * 0.035) * (2 - i) + w * 0.0;
-    ctx.fillStyle = i === 0 ? "#ffffff" : "#f6f8fa";
+    const bx = x + w - (bw + w * 0.035) * (labels.length - i);
+    ctx.fillStyle = i === 0 && !ok ? "#ffffff" : "#f6f8fa";
     ctx.strokeStyle = "#c3ccd6";
     ctx.lineWidth = Math.max(1, h * 0.008);
     roundRect(ctx, bx, by, bw, bh, bh * 0.28);
@@ -248,7 +291,9 @@ function drawDialog(ctx, W, H, box, t, k) {
 
 /* ── 작품 ────────────────────────────────────────────── */
 
-const FROZEN_MS = 2600;   // 응답 없음이 떠 있는 시간
+// 눌렀을 때의 결말은 그때그때 다르다. 대개는 응답 없음이지만 가끔 진짜로 저장된다.
+const SAVE_CHANCE = 0.35;
+const HOLD_MS = { hang: 2600, saved: 1700 };   // 결과가 떠 있는 시간
 
 export class SaveChallenge {
   constructor() {
@@ -257,8 +302,10 @@ export class SaveChallenge {
 
   reset() {
     this.btn = null;
-    this.frozen = 0;       // 얼어붙은 시각 (0이면 평소)
+    this.frozen = 0;       // 결과가 뜬 시각 (0이면 평소)
+    this.result = "hang";  // 이번에 누른 결과
     this.hangs = 0;        // 응답 없음 횟수
+    this.saves = 0;        // 저장된 횟수
     this.press = 0;        // 눌린 표시가 남아 있는 시간
     this.last = 0;
   }
@@ -281,9 +328,9 @@ export class SaveChallenge {
     if (!this.btn) this.spawn(W, H);
     if (this.press > 0) this.press -= dt;
 
-    // 얼어 있는 동안에는 아무것도 움직이지 않는다
+    // 결과가 떠 있는 동안에는 아무것도 움직이지 않는다
     if (this.frozen) {
-      if (t - this.frozen > FROZEN_MS) {
+      if (t - this.frozen > HOLD_MS[this.result]) {
         this.frozen = 0;
         this.spawn(W, H);
       }
@@ -314,7 +361,7 @@ export class SaveChallenge {
       }
     }
 
-    if (hit) return this.hang(t);
+    if (hit) return this.pressed(t);
 
     const base = Math.min(W, H) * 0.16;
     if (panic > 0.01) {
@@ -347,15 +394,22 @@ export class SaveChallenge {
     if (b.y + b.h > H - m) { b.y = H - m - b.h; b.vy = -Math.abs(b.vy); }
   }
 
-  /** 눌렸다 — 곧바로 얼어붙는다 */
-  hang(t) {
+  /** 눌렸다 — 저장될지 얼어붙을지는 눌러 봐야 안다 */
+  pressed(t) {
+    this.result = Math.random() < SAVE_CHANCE ? "saved" : "hang";
     this.frozen = t;
-    this.hangs++;
     this.press = 260;
     this.btn.vx = 0;
     this.btn.vy = 0;
     click();
-    setTimeout(errorTone, 260);
+
+    if (this.result === "saved") {
+      this.saves++;
+      setTimeout(successTone, 240);
+    } else {
+      this.hangs++;
+      setTimeout(errorTone, 260);
+    }
   }
 
   draw(ctx, video, W, H, tips, t) {
@@ -370,20 +424,25 @@ export class SaveChallenge {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 
     const age = this.frozen ? t - this.frozen : 0;
+    const settled = !!this.frozen && age > 240;
     drawButton(this.btn, ctx, {
       pressed: this.press > 0,
-      dead: !!this.frozen && age > 240,
+      dead: settled && this.result === "hang",
+      done: settled && this.result === "saved",
     });
 
     // 누른 뒤 잠깐 있다가 대화상자가 뜬다
-    if (this.frozen && age > 240) {
+    if (settled) {
       const w = Math.min(W * 0.62, H * 1.0);
       const h = w * 0.42;
-      drawDialog(ctx, W, H, { x: (W - w) / 2, y: (H - h) / 2, w, h }, t, (age - 240) / 220);
+      drawDialog(ctx, W, H, { x: (W - w) / 2, y: (H - h) / 2, w, h },
+        t, (age - 240) / 220, this.result);
     }
 
+    // 얼어붙었을 때만 커서가 기다림 표시로 바뀐다
     const cur = Math.min(W, H) * 0.035;
-    for (const tip of tips) drawCursor(ctx, tip.x, tip.y, cur, !!this.frozen, t);
+    const busy = !!this.frozen && this.result === "hang";
+    for (const tip of tips) drawCursor(ctx, tip.x, tip.y, cur, busy, t);
 
     this.drawScore(ctx, W, H);
     ctx.restore();
@@ -418,13 +477,14 @@ export class SaveChallenge {
     ctx.fillText(title, W / 2, ty);
     try { ctx.letterSpacing = "0px"; } catch { /* 무시 */ }
 
-    const fs = Math.round(H * 0.05);
-    ctx.font = `700 ${fs}px "Courier New", monospace`;
+    // 한글이 섞이므로 점수도 본문 글꼴로 쓴다 (Courier에는 한글이 없다)
+    const fs = Math.round(H * 0.048);
+    ctx.font = `700 ${fs}px ${FONT}`;
     ctx.lineWidth = fs * 0.14;
     ctx.strokeStyle = "rgba(0,0,0,0.6)";
-    const label = `SAVED 0   응답없음 ${this.hangs}`;
+    const label = `저장됨 ${this.saves}   응답없음 ${this.hangs}`;
     ctx.strokeText(label, W / 2, H * 0.15);
-    ctx.fillStyle = this.frozen ? "#fca5a5" : "#7dd3fc";
+    ctx.fillStyle = !this.frozen ? "#7dd3fc" : this.result === "saved" ? "#86efac" : "#fca5a5";
     ctx.fillText(label, W / 2, H * 0.15);
     ctx.restore();
   }
