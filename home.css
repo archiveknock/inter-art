@@ -1,0 +1,317 @@
+/* 메인 페이지 — 작품을 고르는 곳.
+   작품 화면(style.css)과는 성격이 달라 따로 둔다. */
+
+:root {
+  --bg: #07080b;
+  --surface: rgba(255, 255, 255, 0.035);
+  --line: rgba(255, 255, 255, 0.09);
+  --text: #eef1f6;
+  --muted: #98a2b3;
+  --accent: #22d3ee;
+}
+
+* { box-sizing: border-box; }
+
+body.home {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Pretendard Variable", "Pretendard", -apple-system,
+    "Apple SD Gothic Neo", "Segoe UI", "Malgun Gothic", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.6;
+}
+
+/* 배경의 은은한 빛 — 내용 뒤에 깔린다 */
+.glowfield {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(48rem 26rem at 12% -8%, rgba(34, 211, 238, 0.16), transparent 60%),
+    radial-gradient(42rem 24rem at 92% 6%, rgba(168, 85, 247, 0.14), transparent 62%),
+    radial-gradient(38rem 22rem at 50% 108%, rgba(251, 191, 36, 0.1), transparent 60%);
+}
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: clamp(48px, 9vw, 104px) clamp(20px, 5vw, 40px) 64px;
+}
+
+/* ── 첫 화면 ──────────────────────────────────────────── */
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 22px;
+  padding: 7px 15px 7px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+}
+
+.eyebrow .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.16);
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(38px, 7.4vw, 76px);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.hero h1 em {
+  font-style: normal;
+  background: linear-gradient(96deg, #67e8f9 0%, #a78bfa 48%, #fbbf24 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.lead {
+  max-width: 46ch;
+  margin: 22px 0 0;
+  color: var(--muted);
+  font-size: clamp(15px, 1.7vw, 17px);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 26px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chips li {
+  padding: 7px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+/* ── 작품 카드 ────────────────────────────────────────── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(248px, 1fr));
+  gap: 16px;
+  margin: clamp(44px, 7vw, 72px) 0 0;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px 22px 20px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background:
+    linear-gradient(168deg, hsla(var(--hue), 90%, 62%, 0.09), transparent 46%),
+    rgba(255, 255, 255, 0.028);
+  color: inherit;
+  text-decoration: none;
+  overflow: hidden;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.28s, background 0.28s, box-shadow 0.28s;
+}
+
+/* 위쪽 모서리를 따라 흐르는 색 띠 */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, transparent,
+    hsl(var(--hue) 92% 66%), transparent);
+  opacity: 0.45;
+  transition: opacity 0.28s;
+}
+
+.card:hover, .card:focus-visible {
+  transform: translateY(-5px);
+  border-color: hsla(var(--hue), 90%, 66%, 0.5);
+  background:
+    linear-gradient(168deg, hsla(var(--hue), 90%, 62%, 0.16), transparent 52%),
+    rgba(255, 255, 255, 0.05);
+  box-shadow: 0 22px 46px -24px hsla(var(--hue), 90%, 50%, 0.8);
+  outline: none;
+}
+
+.card:hover::before, .card:focus-visible::before { opacity: 1; }
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 4px;
+  border-radius: 15px;
+  background: hsla(var(--hue), 88%, 60%, 0.14);
+  border: 1px solid hsla(var(--hue), 88%, 66%, 0.28);
+  font-size: 25px;
+  line-height: 1;
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.62;
+}
+
+.card footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 16px;
+  font-size: 12px;
+}
+
+.need {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: hsla(var(--hue), 88%, 60%, 0.12);
+  color: hsl(var(--hue) 85% 76%);
+  font-weight: 600;
+}
+
+.go {
+  color: var(--muted);
+  font-weight: 600;
+  transition: transform 0.28s, color 0.28s;
+}
+
+.card:hover .go, .card:focus-visible .go {
+  color: var(--text);
+  transform: translateX(3px);
+}
+
+/* ── 이용 방법 ────────────────────────────────────────── */
+
+.how {
+  margin: clamp(48px, 8vw, 80px) 0 0;
+  padding: 28px 26px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+}
+
+.how h3 {
+  margin: 0 0 16px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.how ol {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px 26px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+.how li { padding-left: 2px; }
+.how b { color: var(--text); font-weight: 600; }
+
+/* ── 아래 ─────────────────────────────────────────────── */
+
+.bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: clamp(44px, 7vw, 72px);
+  padding-top: 26px;
+  border-top: 1px solid var(--line);
+}
+
+.by {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(140deg, #67e8f9, #a78bfa);
+  color: #0a1420;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.by div { display: flex; flex-direction: column; line-height: 1.35; }
+.by b { font-size: 14px; }
+.by span { color: var(--muted); font-size: 12px; }
+
+.fine {
+  flex: 1 1 320px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.65;
+  text-align: right;
+}
+
+/* ── 등장 ─────────────────────────────────────────────── */
+
+.hero, .grid > *, .how, .bottom {
+  animation: rise 0.66s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.grid > *:nth-child(2) { animation-delay: 0.06s; }
+.grid > *:nth-child(3) { animation-delay: 0.12s; }
+.grid > *:nth-child(4) { animation-delay: 0.18s; }
+.how { animation-delay: 0.22s; }
+.bottom { animation-delay: 0.26s; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+@media (max-width: 640px) {
+  .fine { text-align: left; }
+  .card { padding: 20px 18px 18px; }
+}

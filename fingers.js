@@ -1,14 +1,13 @@
-// 손가락 오버레이 두 종류
-//  - FingerMessage : 여덟 손가락에 글자를 띄우고, 입술에 대면 그 글자를 읽는다
-//  - FingerMelody  : 여덟 손가락에 음을 배정하고, 엄지에 맞대면 실로폰이 울린다
+// 손가락 멜로디 — 여덟 손가락에 음을 배정하고, 엄지에 맞대면 실로폰이 울린다.
 // 좌표계는 비디오 원본 픽셀 기준이며, 호출 시점의 ctx는 셀피 미러링 상태다.
 
 import { ac, fxOut } from "./audio.js";
+import { sx as toScreenX, sy as toScreenY, len } from "./view.js";
 
 const THUMB_TIP = 4;
 
-// mcp = 손등 관절. 손끝은 입술이나 엄지로 가져가면 위치가 변하지만 관절은
-// 제자리에 있으므로, 순서는 관절 기준으로 정해야 흔들리지 않는다.
+// mcp = 손등 관절. 손끝은 엄지로 가져가면 위치가 변하지만 관절은 제자리에
+// 있으므로, 순서는 관절 기준으로 정해야 흔들리지 않는다.
 const FINGERS = [
   { tip: 8, mcp: 5, name: "검지" },
   { tip: 12, mcp: 9, name: "중지" },
@@ -42,153 +41,6 @@ export function xylophone(freq) {
       osc.stop(t + dur + 0.03);
     }
   } catch { /* 소리가 안 나도 표시는 계속된다 */ }
-}
-
-function tone(freq) {
-  try {
-    const a = ac();
-    const t = a.currentTime;
-    const osc = a.createOscillator();
-    osc.type = "triangle";
-    osc.frequency.value = freq;
-    const gain = a.createGain();
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.3, t + 0.012);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
-    osc.connect(gain).connect(fxOut());
-    osc.start(t);
-    osc.stop(t + 0.75);
-  } catch { /* 무시 */ }
-}
-
-// 글자를 음성으로 읽는다. 음성 합성을 못 쓰면 음으로 대신한다.
-//
-// 기능이 있다고 해서 실제로 소리가 나는 것은 아니다. 카카오톡 같은 앱 안의
-// 브라우저에서는 speak()를 불러도 아무 일이 일어나지 않는 경우가 있어,
-// 소리가 시작되는지 지켜보고 안 나면 음으로 넘어간다.
-const canSpeak = typeof speechSynthesis !== "undefined" &&
-  typeof SpeechSynthesisUtterance !== "undefined";
-
-let speechOk = canSpeak ? null : false;   // null = 아직 모름
-let onNoSpeech = null;
-
-// 못 쓴다고 판단했다가 뒤늦게 발음이 나오면 안내를 거둬야 한다
-let noticeShown = false;
-
-/** 음성을 쓸 수 있는지가 판가름 나면 알려 준다 (인자: 쓸 수 있는가) */
-export function whenSpeechUnavailable(cb) { onNoSpeech = cb; }
-
-/** 음성 목록은 늦게 채워지고, 첫 발음은 이용자 조작 중에 깨워 둬야 잘 나온다 */
-export function primeSpeech() {
-  if (!canSpeak) return;
-  try {
-    speechSynthesis.getVoices();
-    speechSynthesis.resume();
-  } catch { /* 무시 */ }
-}
-
-function giveUpSpeech(freq) {
-  // 한 번이라도 제대로 발음된 브라우저라면 계속 발음으로 간다.
-  // 그 뒤에 나는 오류는 이 브라우저가 못 읽어서가 아니라 그때의 사정일 뿐이다.
-  if (speechOk === true) return;
-  if (speechOk === false) return tone(freq);
-  speechOk = false;
-  tone(freq);
-  noticeShown = true;
-  onNoSpeech?.(false);
-}
-
-/** 발음이 실제로 시작됐다 — 잘못 내린 판단이 있었다면 되돌린다 */
-function speechStarted() {
-  speechOk = true;
-  if (noticeShown) {
-    noticeShown = false;
-    onNoSpeech?.(true);
-  }
-}
-
-/** 소리가 시작되기를 기다린다.
- *
- *  발음을 맡은 엔진이 처음 깨어날 때는 1초 넘게 걸리기도 한다. 시간만 재고
- *  포기하면 뒤늦게 나온 발음과 대신 낸 음이 겹쳐 들린다. 그래서 시간이 아니라
- *  '발음을 준비하고 있는가'를 보고, 준비 중이면 계속 기다린다. 카카오톡처럼
- *  speak()를 무시하는 브라우저는 준비 중이지도 않으므로 바로 걸러진다. */
-function waitForSpeech(freq, tries = 0) {
-  if (speechOk !== null) return;                       // 이미 판가름 났다
-  const 준비중 = speechSynthesis.speaking || speechSynthesis.pending;
-  if (준비중 && tries < 8) {
-    setTimeout(() => waitForSpeech(freq, tries + 1), 500);
-    return;
-  }
-  giveUpSpeech(freq);
-}
-
-function speak(char, fallbackFreq) {
-  if (speechOk === false) return tone(fallbackFreq);
-  try {
-    // 연달아 짚어도 밀리지 않도록 이전 발음을 끊는다
-    if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(char);
-    u.lang = /[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(char) ? "ko-KR" : "en-US";
-    u.rate = 0.85;
-    u.pitch = 1.15;
-    u.onstart = speechStarted;
-    // 연달아 짚어 앞 발음을 끊으면 그 발음에 오류가 뜬다. 이는 고장이 아니다.
-    u.onerror = (e) => {
-      if (e?.error === "interrupted" || e?.error === "canceled") return;
-      giveUpSpeech(fallbackFreq);
-    };
-    speechSynthesis.speak(u);
-    // 아직 한 번도 소리가 난 적이 없다면, 시작하는지 지켜본다
-    if (speechOk === null) setTimeout(() => waitForSpeech(fallbackFreq), 700);
-  } catch {
-    giveUpSpeech(fallbackFreq);
-  }
-}
-
-/* ── 메시지 → 손가락 여덟 개 ─────────────────────────── */
-
-export function messageChars(message) {
-  const chars = [...(message ?? "").replace(/\s+/g, "")];
-  if (!chars.length) return Array(8).fill("·");
-  return Array.from({ length: 8 }, (_, i) => chars[i % chars.length]);
-}
-
-/* ── 입술 ────────────────────────────────────────────── */
-
-let lipIndices = null;
-
-function lipsOf(faceResult, FaceLandmarker, W, H) {
-  const lm = faceResult?.faceLandmarks?.[0];
-  if (!lm) return null;
-
-  if (!lipIndices) {
-    const set = new Set();
-    for (const c of FaceLandmarker.FACE_LANDMARKS_LIPS) { set.add(c.start); set.add(c.end); }
-    lipIndices = [...set];
-  }
-
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, sx = 0, sy = 0;
-  for (const i of lipIndices) {
-    const p = lm[i];
-    if (!p) continue;
-    const x = p.x * W, y = p.y * H;
-    sx += x; sy += y;
-    if (x < x0) x0 = x;
-    if (y < y0) y0 = y;
-    if (x > x1) x1 = x;
-    if (y > y1) y1 = y;
-  }
-  if (!isFinite(x0)) return null;
-
-  return {
-    x: sx / lipIndices.length,
-    y: sy / lipIndices.length,
-    rx: (x1 - x0) / 2,
-    ry: (y1 - y0) / 2,
-    // 입 주변을 스치기만 해도 걸리지 않도록 좁게 잡는다
-    reach: Math.max((x1 - x0) * 0.26, (y1 - y0) * 0.6),
-  };
 }
 
 /* ── 손가락 순서 ─────────────────────────────────────── */
@@ -264,14 +116,14 @@ class FingerOverlay {
 
   drawLabel(ctx, W, H, x, y, text, hue, active, size, tier = 0) {
     // 미러 화면에서 글자가 뒤집히지 않도록 화면 좌표로 변환해 그린다
-    const sx = W - x, sy = y;
-    const fs = Math.max(18, Math.round(size * 0.055));
+    const sx = toScreenX(x, W), sy = toScreenY(y, H);
+    const fs = Math.max(14, Math.round(len(size * 0.055)));
     const pad = fs * 0.55;
     const lift = fs * (1.9 + tier * 1.15);
 
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.font = `800 ${fs}px "Pretendard", system-ui, sans-serif`;
+    ctx.font = `700 ${fs}px "Pretendard Variable", "Pretendard", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
@@ -319,61 +171,15 @@ class FingerOverlay {
       if (age >= 1) { this.ripples.splice(i, 1); continue; }
       ctx.globalAlpha = (1 - age) * 0.8;
       ctx.strokeStyle = `hsl(${r.hue}, 95%, 68%)`;
-      ctx.lineWidth = size * 0.012 * (1 - age);
+      ctx.lineWidth = len(size * 0.012 * (1 - age));
       ctx.beginPath();
-      ctx.arc(W - r.x, r.y, size * (0.03 + age * 0.16), 0, Math.PI * 2);
+      ctx.arc(toScreenX(r.x, W), toScreenY(r.y, H), len(size * (0.03 + age * 0.16)), 0, Math.PI * 2);
       ctx.stroke();
     }
     ctx.restore();
   }
 }
 
-/* ── 손가락 메시지 : 입술에 대면 글자를 읽는다 ───────── */
-
-export class FingerMessage extends FingerOverlay {
-  draw(ctx, video, W, H, handResult, faceResult, FaceLandmarker, message, t) {
-    ctx.drawImage(video, 0, 0, W, H);
-
-    const size = Math.min(W, H);
-    const chars = messageChars(message);
-    const tips = orderedFingers((handResult?.landmarks ?? []).slice(0, 2), W, H, size);
-    const lips = lipsOf(faceResult, FaceLandmarker, W, H);
-
-    if (lips) this.drawLips(ctx, W, H, lips, t);
-
-    const touching = (tip) =>
-      !!lips && Math.hypot(tip.x - lips.x, tip.y - lips.y) < lips.reach;
-
-    this.resolve(tips, touching, (tip) => speak(chars[tip.slot], SCALE[tip.slot]), t);
-
-    for (const tip of tips) {
-      this.drawLabel(ctx, W, H, tip.x, tip.y, chars[tip.slot], HUES[tip.slot],
-        touching(tip), size, tip.slot % 2);
-    }
-    this.drawRipples(ctx, W, H, t, size);
-  }
-
-  drawLips(ctx, W, H, lips, t) {
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    const sx = W - lips.x, sy = lips.y;
-    const pulse = 1 + Math.sin(t / 260) * 0.06;
-
-    ctx.strokeStyle = "rgba(244,114,182,0.85)";
-    ctx.lineWidth = Math.max(2, lips.reach * 0.16);
-    ctx.setLineDash([lips.reach * 0.5, lips.reach * 0.4]);
-    ctx.beginPath();
-    ctx.arc(sx, sy, lips.reach * pulse, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.fillStyle = "rgba(244,114,182,0.16)";
-    ctx.beginPath();
-    ctx.ellipse(sx, sy, lips.rx, lips.ry, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-}
 
 /* ── 손가락 멜로디 : 엄지에 맞대면 실로폰이 울린다 ───── */
 

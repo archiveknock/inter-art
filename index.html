@@ -3,76 +3,77 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Interactive Art</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>Interactive Art · archiveknock</title>
+  <meta name="description" content="웹캠으로 손과 얼굴의 움직임을 인식하여 반응하는 브라우저 기반 인터랙티브 아트 모음." />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" />
+  <link rel="stylesheet" href="home.css" />
 </head>
-<body>
-  <header>
-    <div>
-      <h1>Interactive Art</h1>
-      <p class="sub">Created by archiveknock</p>
-    </div>
-    <button id="btnImmersive" class="ghost" title="몰입 모드 (전체 화면)">⛶ 몰입 모드</button>
-  </header>
+<body class="home">
+  <div class="glowfield" aria-hidden="true"></div>
 
-  <main>
-    <section class="viewer" id="viewer">
-      <div class="stage" id="stage">
-        <video id="video" autoplay playsinline muted></video>
-        <canvas id="canvas"></canvas>
-        <div id="status" class="status">카메라를 켜면 시작합니다</div>
-        <div id="recDot" class="rec-dot" hidden><span></span><b id="recTime">0:00</b></div>
-        <div id="detect" class="detect" hidden></div>
-      </div>
+  <main class="wrap">
+    <header class="hero">
+      <p class="eyebrow"><span class="dot"></span> WEBCAM INTERACTIVE ART</p>
+      <h1>손으로 만지는<br /><em>인터랙티브 아트</em></h1>
+      <p class="lead">
+        웹캠에 비친 손과 얼굴의 움직임을 알아보고 화면이 반응합니다.
+        설치도 계정도 필요 없이, 작품을 고르고 카메라를 켜면 시작됩니다.
+      </p>
+      <ul class="chips">
+        <li>🔒 영상은 기기 안에서만 처리</li>
+        <li>⚡ 설치 불필요</li>
+        <li>📱 스마트폰 지원</li>
+      </ul>
+    </header>
 
-      <!-- 몰입 모드에서만 보이는 떠 있는 조작부 -->
-      <div id="floating" class="floating">
-        <button class="ficon fx" data-fx="roach" title="바퀴벌레 잡기">🪳</button>
-        <button class="ficon fx" data-fx="finger" title="손가락 메시지">💬</button>
-        <button class="ficon fx" data-fx="melody" title="손가락 멜로디">🎵</button>
-        <i class="fsep"></i>
-        <button class="ficon" id="fRec" title="녹화">⏺</button>
-        <button class="ficon" id="fShot" title="스냅샷">📷</button>
-        <button class="ficon" id="fExit" title="몰입 모드 종료">✕</button>
-      </div>
+    <nav class="grid" aria-label="작품 목록">
+      <a class="card" style="--hue: 195" href="save.html">
+        <span class="icon">💾</span>
+        <h2>저장 버튼 누르기 챌린지</h2>
+        <p>Save 버튼이 손가락을 피해 달아납니다. 기어이 눌러도 저장되지 않습니다 — 응답 없음.</p>
+        <footer><span class="need">손 인식</span><span class="go">시작하기 →</span></footer>
+      </a>
+
+      <a class="card" style="--hue: 265" href="melody.html">
+        <span class="icon">🎵</span>
+        <h2>손가락 멜로디</h2>
+        <p>여덟 손가락에 도–레–미–파–솔–라–시–도를 배정합니다. 손끝을 엄지에 맞대면 실로폰 소리가 납니다.</p>
+        <footer><span class="need">손 인식</span><span class="go">시작하기 →</span></footer>
+      </a>
+
+      <a class="card" style="--hue: 38" href="coffee.html">
+        <span class="icon">☕</span>
+        <h2>커피콩 받기</h2>
+        <p>주먹을 쥐면 KNOCK 머그컵을 잡습니다. 떨어지는 커피콩을 받아내면 눈이 초롱초롱해지고, 놓치면 다크서클이 생깁니다.</p>
+        <footer><span class="need">손 + 얼굴 인식</span><span class="go">시작하기 →</span></footer>
+      </a>
+    </nav>
+
+    <section class="how">
+      <h3>이용 방법</h3>
+      <ol>
+        <li><b>작품을 고릅니다.</b> 각 작품은 주소로 바로 들어갈 수도 있습니다.</li>
+        <li><b>카메라를 켭니다.</b> 처음 한 번 인식 모델을 내려받습니다.</li>
+        <li><b>손을 화면에 크게 비춥니다.</b> 오른쪽 위에 인식 상태가 보입니다.</li>
+        <li><b>녹화하거나 저장합니다.</b> 화면 그대로 영상·이미지로 남습니다.</li>
+      </ol>
     </section>
 
-    <aside class="panel">
-      <div class="effects">
-        <button class="fx is-on" data-fx="roach" title="바퀴벌레 잡기"><b>바퀴벌레</b><span>🪳</span></button>
-        <button class="fx" data-fx="finger" title="손가락 메시지"><b>메시지</b><span>💬</span></button>
-        <button class="fx" data-fx="melody" title="손가락 멜로디"><b>멜로디</b><span>🎵</span></button>
+    <footer class="bottom">
+      <div class="by">
+        <span class="avatar" aria-hidden="true">AK</span>
+        <div>
+          <b>제작 · archiveknock</b>
+          <span>웹캠 인터랙티브 아트 연작</span>
+        </div>
       </div>
-
-      <label class="field" id="msgField">
-        메시지 <span class="for">공백 제외 8글자</span>
-        <input id="fingerMsg" type="text" value="I LOVE YOU" maxlength="24" />
-      </label>
-
-      <button id="btnStart" class="primary">카메라 켜기</button>
-
-      <div class="row">
-        <button id="btnRec" disabled>● 녹화 시작</button>
-        <button id="btnShot" disabled>스냅샷</button>
-      </div>
-
-      <details class="more">
-        <summary>고급 설정</summary>
-        <label class="check"><input id="withAudio" type="checkbox" /> 마이크 소리 함께 녹음</label>
-        <label class="check" id="tabAudioField" hidden>
-          <input id="withTabAudio" type="checkbox" /> 읽어주는 음성까지 녹음
-        </label>
-        <label class="check"><input id="cpuMode" type="checkbox" /> GPU 가속 끄기</label>
-        <p class="note">
-          음성까지 녹음하려면 공유 창에서 <b>이 탭</b>과 <b>탭 오디오 공유</b>를 선택하세요.
-        </p>
-      </details>
-
-      <p class="privacy">영상은 기기 안에서만 처리되며 서버로 전송되지 않습니다.</p>
-      <p id="note" class="diag" hidden></p>
-    </aside>
+      <p class="fine">
+        카메라 영상은 이용자의 기기 안에서만 처리되며 서버로 전송되거나 저장되지 않습니다.
+        모든 인식 연산은 방문자의 브라우저에서 수행됩니다.
+      </p>
+    </footer>
   </main>
-
-  <script type="module" src="app.js"></script>
 </body>
 </html>
