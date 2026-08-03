@@ -18,6 +18,13 @@ export const WORKS = {
     tag: "두 손을 모으면 렌더링이 시작됩니다",
     tasks: ["hand"],
   },
+  undo: {
+    name: "Ctrl+Z 충전소",
+    icon: "🔋",
+    page: "undo.html",
+    tag: "떠다니는 Ctrl+Z를 손으로 모으세요",
+    tasks: ["hand"],
+  },
   coffee: {
     name: "커피콩 받기",
     icon: "☕",

@@ -11,6 +11,7 @@ import {
 import { SaveChallenge, fingertipsOf } from "./save.js";
 import { CoffeeGame } from "./coffee.js";
 import { PrayRender } from "./pray.js";
+import { UndoStation } from "./undo.js";
 import {
   recordStream, attachMic, detachMic,
   attachTabAudio, detachTabAudio, canCaptureTab,
@@ -52,6 +53,7 @@ export function start(effect) {
 
   const saveGame = effect === "save" ? new SaveChallenge() : null;
   const pray = effect === "pray" ? new PrayRender() : null;
+  const undo = effect === "undo" ? new UndoStation() : null;
   const coffee = effect === "coffee" ? new CoffeeGame() : null;
 
   let vision = null;
@@ -415,6 +417,10 @@ export function start(effect) {
           const hands = detectOf(MAIN);
           reportDetection(hands.landmarks?.length ?? 0, "손");
           pray.draw(ctx, video, W, H, hands, ts);
+        } else if (effect === "undo") {
+          const hands = detectOf(MAIN);
+          reportDetection(hands.landmarks?.length ?? 0, "손");
+          undo.draw(ctx, video, W, H, hands, ts);
         } else {
           const tips = fingertipsOf(detectOf(MAIN), W, H);
           reportDetection(tips.length, "검지");
