@@ -89,7 +89,7 @@ export function tipsOf(handResult, W, H) {
     if (!p) continue;
     const size = len(Math.hypot((lm[9].x - lm[0].x) * W, (lm[9].y - lm[0].y) * H));
     if (!size) continue;
-    out.push({ x: sx(p.x * W, W), y: sy(p.y * H, H), r: size * 0.42 });
+    out.push({ x: sx(p.x * W, W), y: sy(p.y * H, H), r: size * 0.22 });
   }
   return out;
 }
@@ -151,25 +151,23 @@ function drawTip(ctx, p, t) {
   ctx.save();
   const pulse = 1 + Math.sin(t / 300) * 0.07;
 
-  const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 1.6);
-  g.addColorStop(0, "rgba(103,232,249,0.4)");
+  const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 1.4);
+  g.addColorStop(0, "rgba(103,232,249,0.34)");
   g.addColorStop(1, "rgba(34,211,238,0)");
   ctx.fillStyle = g;
   ctx.beginPath();
-  ctx.arc(p.x, p.y, p.r * 1.6, 0, Math.PI * 2);
+  ctx.arc(p.x, p.y, p.r * 1.4, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.strokeStyle = "rgba(103,232,249,0.85)";
-  ctx.lineWidth = Math.max(1.5, p.r * 0.12);
-  ctx.setLineDash([p.r * 0.6, p.r * 0.45]);
+  ctx.strokeStyle = "rgba(103,232,249,0.9)";
+  ctx.lineWidth = Math.max(1.2, p.r * 0.16);
   ctx.beginPath();
-  ctx.arc(p.x, p.y, p.r * pulse, t / 1200, t / 1200 + Math.PI * 2);
+  ctx.arc(p.x, p.y, p.r * pulse, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.setLineDash([]);
 
-  ctx.fillStyle = "rgba(224,252,255,0.95)";
+  ctx.fillStyle = "rgba(230,253,255,0.95)";
   ctx.beginPath();
-  ctx.arc(p.x, p.y, p.r * 0.2, 0, Math.PI * 2);
+  ctx.arc(p.x, p.y, p.r * 0.3, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
