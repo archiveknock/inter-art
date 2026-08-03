@@ -89,7 +89,7 @@ export function tipsOf(handResult, W, H) {
     if (!p) continue;
     const size = len(Math.hypot((lm[9].x - lm[0].x) * W, (lm[9].y - lm[0].y) * H));
     if (!size) continue;
-    out.push({ x: sx(p.x * W, W), y: sy(p.y * H, H), r: size * 0.22 });
+    out.push({ x: sx(p.x * W, W), y: sy(p.y * H, H), r: size * 0.12 });
   }
   return out;
 }
@@ -396,10 +396,11 @@ export class UndoStation {
       for (const p of tips) {
         const dx = k.x - p.x, dy = k.y - p.y;
         const d = Math.hypot(dx, dy) || 1;
-        if (d < p.r * 1.5 + k.r * 0.75) { caught = true; break; }
+        if (d < p.r * 1.6 + k.r * 0.75) { caught = true; break; }
 
         // 손끝이 다가오면 반대쪽으로 달아난다. 가까울수록 다급해진다.
-        const R = p.r * 7 + k.r * 2;
+        // 조준점이 작아도 달아나는 거리는 손 크기를 따라야 쫓는 맛이 난다.
+        const R = p.r * 12 + k.r * 2;
         if (d < R) {
           const w = (1 - d / R) ** 2;
           fleeX += (dx / d) * w;
