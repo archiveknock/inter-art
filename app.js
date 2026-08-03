@@ -10,7 +10,7 @@ import {
 
 import { SaveChallenge, fingertipsOf } from "./save.js";
 import { CoffeeGame } from "./coffee.js";
-import { FingerMelody } from "./fingers.js";
+import { PrayRender } from "./pray.js";
 import {
   recordStream, attachMic, detachMic,
   attachTabAudio, detachTabAudio, canCaptureTab,
@@ -51,7 +51,7 @@ export function start(effect) {
   let loopError = false;
 
   const saveGame = effect === "save" ? new SaveChallenge() : null;
-  const melody = effect === "melody" ? new FingerMelody() : null;
+  const pray = effect === "pray" ? new PrayRender() : null;
   const coffee = effect === "coffee" ? new CoffeeGame() : null;
 
   let vision = null;
@@ -411,10 +411,10 @@ export function start(effect) {
           const face = detectOf("face");
           reportDetection(hands.landmarks?.length ?? 0, "손");
           coffee.draw(ctx, video, W, H, hands, face, FaceLandmarker, ts);
-        } else if (effect === "melody") {
+        } else if (effect === "pray") {
           const hands = detectOf(MAIN);
           reportDetection(hands.landmarks?.length ?? 0, "손");
-          melody.draw(ctx, video, W, H, hands, ts);
+          pray.draw(ctx, video, W, H, hands, ts);
         } else {
           const tips = fingertipsOf(detectOf(MAIN), W, H);
           reportDetection(tips.length, "검지");

@@ -11,11 +11,11 @@ export const WORKS = {
     tag: "달아나는 Save 버튼을 검지로 눌러 보세요",
     tasks: ["hand"],
   },
-  melody: {
-    name: "손가락 멜로디",
-    icon: "🎵",
-    page: "melody.html",
-    tag: "손끝을 엄지에 맞대면 실로폰이 울립니다",
+  pray: {
+    name: "렌더링 성공 기도하기",
+    icon: "🙏",
+    page: "pray.html",
+    tag: "두 손을 모으면 렌더링이 시작됩니다",
     tasks: ["hand"],
   },
   coffee: {
