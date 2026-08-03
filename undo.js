@@ -349,7 +349,7 @@ export class UndoStation {
       vy: Math.sin(a) * speed,
       seed: rnd(0, 6.28),
       fade: 0,
-      taken: 0,
+      inside: false,
     });
   }
 
@@ -390,10 +390,22 @@ export class UndoStation {
       const k = this.keys[i];
       k.fade = Math.min(1, k.fade + sec * 2.5);
 
-      // 검지 끝이 닿으면 빨려 들어간다
+      // 검지 끝이 닿으면 빨려 들어간다. 눈에 보이는 빛무리만큼이 판정 범위다.
       let caught = false;
+      let fleeX = 0, fleeY = 0, panic = 0;
       for (const p of tips) {
-        if (Math.hypot(k.x - p.x, k.y - p.y) < p.r + k.r * 0.8) { caught = true; break; }
+        const dx = k.x - p.x, dy = k.y - p.y;
+        const d = Math.hypot(dx, dy) || 1;
+        if (d < p.r * 1.5 + k.r * 0.75) { caught = true; break; }
+
+        // 손끝이 다가오면 반대쪽으로 달아난다. 가까울수록 다급해진다.
+        const R = p.r * 7 + k.r * 2;
+        if (d < R) {
+          const w = (1 - d / R) ** 2;
+          fleeX += (dx / d) * w;
+          fleeY += (dy / d) * w;
+          panic = Math.max(panic, w);
+        }
       }
       if (caught) {
         this.keys.splice(i, 1);
@@ -401,18 +413,37 @@ export class UndoStation {
         continue;
       }
 
+      const cruise = Math.min(W, H) * 0.08;
+      if (panic > 0.01) {
+        const speed = cruise * (1 + panic * 5);
+        const n = Math.hypot(fleeX, fleeY) || 1;
+        const f = Math.min(1, sec * 8);
+        k.vx += ((fleeX / n) * speed - k.vx) * f;
+        k.vy += ((fleeY / n) * speed - k.vy) * f;
+      } else {
+        // 손이 멀어지면 원래 속도로 되돌아간다
+        const sp = Math.hypot(k.vx, k.vy) || 1;
+        const f = Math.min(1, sec * 1.2);
+        k.vx += ((k.vx / sp) * cruise - k.vx) * f;
+        k.vy += ((k.vy / sp) * cruise - k.vy) * f;
+      }
+
       k.x += k.vx * sec;
       k.y += k.vy * sec;
 
-      // 충전 칸 위로는 내려오지 않는다 (글자가 가려진다)
-      const floor = H * 0.7;
-      if (k.y > floor) {
-        k.y = floor;
-        k.vy = -Math.abs(k.vy);
-      }
+      // 화면 안으로 들어온 뒤로는 벽에 튕기며 갇힌다.
+      // 그러지 않으면 손을 피해 그대로 밖으로 달아나 버린다.
+      const m = k.r * 1.2;
+      const floor = H * 0.7;   // 충전 칸 위로는 내려오지 않는다 (글자가 가려진다)
+      if (!k.inside && k.x > m && k.x < W - m && k.y > m && k.y < floor) k.inside = true;
 
-      // 너무 멀리 흘러가면 사라진다
-      if (k.x < -margin || k.x > W + margin || k.y < -margin || k.y > H + margin) {
+      if (k.inside) {
+        if (k.x < m) { k.x = m; k.vx = Math.abs(k.vx); }
+        if (k.x > W - m) { k.x = W - m; k.vx = -Math.abs(k.vx); }
+        if (k.y < m) { k.y = m; k.vy = Math.abs(k.vy); }
+        if (k.y > floor) { k.y = floor; k.vy = -Math.abs(k.vy); }
+      } else if (k.x < -margin || k.x > W + margin || k.y < -margin || k.y > H + margin) {
+        // 들어오지 못하고 흘러가 버린 것은 지운다
         this.keys.splice(i, 1);
       }
     }

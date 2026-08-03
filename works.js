@@ -22,7 +22,7 @@ export const WORKS = {
     name: "Ctrl+Z 충전소",
     icon: "🔋",
     page: "undo.html",
-    tag: "떠다니는 Ctrl+Z를 검지 끝으로 모으세요",
+    tag: "달아나는 Ctrl+Z를 검지 끝으로 잡으세요",
     tasks: ["hand"],
   },
   coffee: {
