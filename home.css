@@ -55,7 +55,8 @@ body.home {
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  /* 한글은 자간을 넓히면 늘어져 보인다. 라틴 대문자용 값을 쓰지 않는다. */
+  letter-spacing: 0.01em;
 }
 
 .eyebrow .dot {
@@ -224,6 +225,9 @@ body.home {
   background: var(--surface);
 }
 
+/* 안내 상자가 연달아 오면 사이는 좁게 둔다 */
+.how ~ .how { margin-top: 16px; }
+
 .how h3 {
   margin: 0 0 16px;
   font-size: 15px;
@@ -232,7 +236,8 @@ body.home {
   letter-spacing: 0.02em;
 }
 
-.how ol {
+.how ol,
+.how .tips {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 14px 26px;
@@ -240,6 +245,26 @@ body.home {
   padding-left: 20px;
   color: var(--muted);
   font-size: 13.5px;
+}
+
+/* 순서가 있는 단계가 아니라 골라 쓰는 방법들이다 */
+.how .tips { list-style: none; padding-left: 0; }
+
+.how .tips li {
+  position: relative;
+  padding-left: 16px;
+}
+
+.how .tips li::before {
+  content: "";
+  position: absolute;
+  top: 0.55em;
+  left: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.7;
 }
 
 .how li { padding-left: 2px; }
@@ -300,7 +325,8 @@ body.home {
 .grid > *:nth-child(3) { animation-delay: 0.12s; }
 .grid > *:nth-child(4) { animation-delay: 0.18s; }
 .how { animation-delay: 0.22s; }
-.bottom { animation-delay: 0.26s; }
+.how ~ .how { animation-delay: 0.26s; }
+.bottom { animation-delay: 0.3s; }
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(14px); }

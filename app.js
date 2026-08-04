@@ -12,10 +12,7 @@ import { SaveChallenge, fingertipsOf } from "./save.js";
 import { CoffeeGame } from "./coffee.js";
 import { PrayRender } from "./pray.js";
 import { UndoStation } from "./undo.js";
-import {
-  recordStream, attachMic, detachMic,
-  attachTabAudio, detachTabAudio, canCaptureTab,
-} from "./audio.js";
+import { recordStream } from "./audio.js";
 import { view, base } from "./view.js";
 import { mount } from "./ui.js";
 
@@ -42,14 +39,16 @@ export function start(effect) {
     stage.style.setProperty("--arn", `${canvas.width / canvas.height}`);
   }
 
-  // 탭 소리 녹음은 이를 지원하는 브라우저에서만 보인다 (모바일은 대체로 지원하지 않는다)
-  el.tabAudioField.hidden = !canCaptureTab();
-
   let running = false;
   let lastTs = -1;
   const lastResults = {};     // 모델별 마지막 추론 결과
   const lastVideoTimes = {};  // 모델별로 마지막에 처리한 영상 시각
   let loopError = false;
+
+  // 툴바 토글의 상태. 휴대폰은 GPU 연산이 아무것도 못 알아보는 사례가 잦아
+  // CPU를 기본으로 둔다 — 느려도 안 되는 것보다 낫다. 아래에서 저장값으로 덮는다.
+  const isMobile = matchMedia("(pointer: coarse)").matches && matchMedia("(max-width: 900px)").matches;
+  const opt = { cpu: isMobile };
 
   const saveGame = effect === "save" ? new SaveChallenge() : null;
   const pray = effect === "pray" ? new PrayRender() : null;
@@ -86,10 +85,21 @@ export function start(effect) {
     el.detectEl.hidden = false;
   }
 
-  // 폰에서는 콘솔을 볼 수 없으므로 진단 메시지를 화면에 남긴다
-  function note(msg) {
+  // 폰에서는 콘솔을 볼 수 없으므로 진단 메시지를 화면에 남긴다.
+  // 오류는 사라지면 안 되므로 note()는 지울 때까지 남는다.
+  let noteTimer = null;
+
+  function note(msg, kind = "error") {
+    clearTimeout(noteTimer);
     el.noteEl.hidden = !msg;
     el.noteEl.textContent = msg ?? "";
+    el.noteEl.classList.toggle("info", kind === "info");
+  }
+
+  /** 알려만 주면 되는 소식 — 잠시 뒤 스스로 사라진다 */
+  function flash(msg, ms = 2400) {
+    note(msg, "info");
+    noteTimer = setTimeout(() => note(null), ms);
   }
 
   /** 카메라 열기 — 안드로이드는 facingMode가 없으면 후면 카메라가 잡힌다 */
@@ -201,7 +211,7 @@ export function start(effect) {
     loading[kind] = (async () => {
       if (!vision) vision = await FilesetResolver.forVisionTasks(WASM);
       let task;
-      if (el.cpuModeEl.checked) {
+      if (opt.cpu) {
         tasks[kind] = await createTask(kind, "CPU");
         return tasks[kind];
       }
@@ -221,6 +231,21 @@ export function start(effect) {
 
   /* ── 카메라 ──────────────────────────────────────────── */
 
+  // 툴바가 좁아 글자를 넣을 자리가 없다. 아이콘만 바꾸고 설명은 title로 남긴다.
+  const START_LABEL = {
+    off: ["🎥", "웹캠 켜기"],
+    on: ["🎥", "웹캠 끄기"],
+    retry: ["↻", "다시 시도"],
+  };
+
+  function setStartButton(mode) {
+    const [icon, label] = START_LABEL[mode];
+    el.btnStart.textContent = icon;
+    el.btnStart.dataset.tip = label;
+    el.btnStart.setAttribute("aria-label", label);
+    el.btnStart.classList.toggle("off", mode === "on");
+  }
+
   function stopCamera() {
     running = false;
     if (recorder) stopRecording();
@@ -234,8 +259,7 @@ export function start(effect) {
     for (const k of Object.keys(lastResults)) delete lastResults[k];
     for (const k of Object.keys(lastVideoTimes)) delete lastVideoTimes[k];
 
-    el.btnStart.textContent = "카메라 켜기";
-    el.btnStart.classList.remove("off");
+    setStartButton("off");
     el.btnRec.disabled = true;
     el.btnShot.disabled = true;
     el.detectEl.hidden = true;
@@ -273,29 +297,31 @@ export function start(effect) {
       el.btnStart.disabled = false;
       el.btnRec.disabled = false;
       el.btnShot.disabled = false;
-      el.btnStart.textContent = "카메라 끄기";
-      el.btnStart.classList.add("off");
+      setStartButton("on");
       requestAnimationFrame(loop);
     } catch (err) {
       console.error(err);
       setStatus(`시작 실패: ${err.message}`);
       note(`${err.name || "Error"}: ${err.message} / ${navigator.userAgent}`);
       el.btnStart.disabled = false;
-      el.btnStart.textContent = "다시 시도";
+      setStartButton("retry");
     }
   });
 
-  // GPU 연산이 통하지 않는 기기가 있다. 그런 이용자가 올 때마다 다시 켜지 않도록
-  // 선택을 기억해 둔다.
-  //
-  // 데스크톱은 GPU가 기본이다. CPU 연산은 3배 가까이 느리다.
-  // 다만 휴대폰은 GPU 연산이 아무것도 못 알아보는 사례가 잦아 CPU를 기본으로 둔다.
-  // 느려도 인식되는 편이 빠르지만 안 되는 것보다 낫다. 원하면 끌 수 있다.
-  const isMobile = matchMedia("(pointer: coarse)").matches && matchMedia("(max-width: 900px)").matches;
+  // GPU 연산이 통하지 않는 기기가 있다. 그런 이용자가 올 때마다 다시 끄지 않도록
+  // 선택을 기억해 둔다. (데스크톱은 GPU가 기본, CPU 연산은 3배 가까이 느리다.)
   try {
     const saved = localStorage.getItem("cpuMode");
-    el.cpuModeEl.checked = saved === null ? isMobile : saved === "1";
-  } catch { el.cpuModeEl.checked = isMobile; }
+    opt.cpu = saved === null ? isMobile : saved === "1";
+  } catch { /* 저장된 값을 못 읽으면 기본값을 쓴다 */ }
+
+  // 단추는 켜진 상태를 눌린 모양으로 보여준다. GPU 가속은 CPU 모드의 반대다.
+  function paintToggles() {
+    el.btnGpu.classList.toggle("is-on", !opt.cpu);
+    el.btnGpu.setAttribute("aria-pressed", String(!opt.cpu));
+    el.btnGpu.dataset.tip = opt.cpu ? "GPU 가속 켜기" : "GPU 가속 끄기";
+  }
+  paintToggles();
 
   // 캔버스는 아직 내려받지 않은 글꼴을 조용히 건너뛰고 다른 글꼴로 그린다.
   // 화면에 쓸 글자를 미리 달라고 해 두면 첫 프레임부터 제 글꼴로 나온다.
@@ -303,28 +329,11 @@ export function start(effect) {
     document.fonts?.load('600 40px "Pretendard Variable"', "편집자는 커피로 움직입니다! 주먹을 쥐세요 KNOCK 도레미파솔라시");
   } catch { /* 글꼴을 못 불러와도 기본 글꼴로 나온다 */ }
 
-  /* ── 화면 배율 ───────────────────────────────────────── */
-
-  // 카메라는 화각이 고정이라 뒤로 물러날 수 없다. 대신 그림을 줄여 멀어져 보이게 한다.
-  function applyZoom(save) {
-    view.zoom = Number(el.zoomEl.value);
-    el.zoomVal.textContent = `${Math.round(view.zoom * 100)}%`;
-    if (save) {
-      try { localStorage.setItem("zoom", el.zoomEl.value); } catch { /* 무시 */ }
-    }
-  }
-
-  try {
-    const saved = localStorage.getItem("zoom");
-    if (saved) el.zoomEl.value = saved;
-  } catch { /* 무시 */ }
-  applyZoom(false);
-
-  el.zoomEl.addEventListener("input", () => applyZoom(true));
-
   // GPU/CPU 전환 — 만들어 둔 추론기를 모두 버리고 다시 만든다
-  el.cpuModeEl.addEventListener("change", async () => {
-    try { localStorage.setItem("cpuMode", el.cpuModeEl.checked ? "1" : "0"); } catch { /* 무시 */ }
+  el.btnGpu.addEventListener("click", async () => {
+    opt.cpu = !opt.cpu;
+    paintToggles();
+    try { localStorage.setItem("cpuMode", opt.cpu ? "1" : "0"); } catch { /* 무시 */ }
 
     for (const kind of Object.keys(tasks)) {
       try { tasks[kind]?.close?.(); } catch { /* 정리 실패는 무시 */ }
@@ -334,16 +343,20 @@ export function start(effect) {
       delete failures[kind];
       runMode[kind] = "VIDEO";
     }
-    note(el.cpuModeEl.checked ? "CPU 모드로 다시 불러옵니다…" : "GPU 모드로 다시 불러옵니다…");
-    if (running) {
-      setStatus("모델 불러오는 중…");
-      try {
-        await Promise.all(NEEDED.map(getTask));
-        setStatus(null);
-        note(null);
-      } catch (err) {
-        setStatus(`모델 로딩 실패: ${err.message}`);
-      }
+    // 웹캠이 꺼져 있으면 다시 부를 것도 없다. 알림은 켤 때 자연스럽게 사라진다.
+    if (!running) {
+      flash(opt.cpu ? "GPU 가속을 껐습니다" : "GPU 가속을 켰습니다");
+      return;
+    }
+
+    flash(opt.cpu ? "CPU 모드로 다시 불러옵니다…" : "GPU 모드로 다시 불러옵니다…");
+    setStatus("모델 불러오는 중…");
+    try {
+      await Promise.all(NEEDED.map(getTask));
+      setStatus(null);
+      note(null);
+    } catch (err) {
+      setStatus(`모델 로딩 실패: ${err.message}`);
     }
   });
 
@@ -480,28 +493,6 @@ export function start(effect) {
   async function startRecording() {
     const stream = canvas.captureStream(30);
 
-    // 바깥 소리는 모두 효과음과 같은 출력에 섞는다
-    // (MediaRecorder는 오디오 트랙을 하나만 담는다)
-    if (el.withTabAudio?.checked) {
-      try {
-        await attachTabAudio();
-      } catch (err) {
-        console.warn("탭 소리 사용 불가:", err);
-        note(err.name === "NotAllowedError"
-          ? "화면 공유를 취소하여 읽어주는 음성 없이 녹음합니다"
-          : `읽어주는 음성 없이 녹음합니다 — ${err.message || err.name}`);
-      }
-    }
-
-    if (el.withAudio.checked) {
-      try {
-        await attachMic();
-      } catch (err) {
-        console.warn("마이크 사용 불가:", err);
-        note(`마이크를 쓸 수 없어 효과음만 녹음합니다 (${err.name || "오류"})`);
-      }
-    }
-
     // 실로폰·효과음이 영상에 함께 담기도록 앱 소리를 실어보낸다
     for (const t of recordStream().getAudioTracks()) stream.addTrack(t);
 
@@ -520,8 +511,6 @@ export function start(effect) {
       const ext = type.includes("mp4") ? "mp4" : "webm";
       // 캔버스 트랙만 정리한다. 효과음 출력은 다음 녹화에서도 계속 쓴다.
       stream.getVideoTracks().forEach((t) => t.stop());
-      detachMic();
-      detachTabAudio();
       if (parts.length) {
         download(new Blob(parts, { type }), `artwork-${effect}-${stamp()}.${ext}`);
       }
@@ -572,25 +561,6 @@ export function start(effect) {
   el.btnRec.addEventListener("click", toggleRecording);
   el.btnShot.addEventListener("click", takeSnapshot);
 
-  /* ── 설정 팝오버 ─────────────────────────────────────── */
-
-  function togglePop(open = el.pop.hidden) {
-    el.pop.hidden = !open;
-    el.btnMore.classList.toggle("is-on", open);
-  }
-
-  el.btnMore.addEventListener("click", (e) => {
-    e.stopPropagation();
-    togglePop();
-  });
-
-  // 바깥을 누르거나 Esc를 누르면 닫는다
-  el.pop.addEventListener("click", (e) => e.stopPropagation());
-  document.addEventListener("click", () => togglePop(false));
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !el.pop.hidden) togglePop(false);
-  });
-
   /* ── 몰입 모드 ───────────────────────────────────────── */
 
   async function enterImmersive() {
@@ -625,7 +595,8 @@ export function start(effect) {
 
   document.addEventListener("fullscreenchange", () => {
     const on = !!document.fullscreenElement;
-    el.btnImmersive.title = on ? "몰입 모드 종료" : "몰입 모드 (전체 화면)";
+    el.btnImmersive.dataset.tip = on ? "몰입 모드 종료" : "몰입 모드";
+    el.btnImmersive.setAttribute("aria-label", on ? "몰입 모드 종료" : "몰입 모드 (전체 화면)");
     el.btnImmersive.classList.toggle("is-on", on);
     wake();
   });

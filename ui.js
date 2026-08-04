@@ -30,34 +30,17 @@ export function mount(fxId) {
           <div id="detect" class="detect" hidden></div>
         </div>
 
-        <!-- 설정은 평소에 숨겨 두고 톱니 단추로 꺼낸다 -->
-        <div id="pop" class="pop" hidden>
-          <label class="field range">
-            화면 배율 <span class="for" id="zoomVal">100%</span>
-            <input id="zoom" type="range" min="0.5" max="1" step="0.05" value="1" />
-            <span class="hint">줄일수록 뒤로 물러난 것처럼 보입니다</span>
-          </label>
+        <p id="note" class="diag" hidden></p>
 
-          <label class="check"><input id="withAudio" type="checkbox" /> 마이크 소리 함께 녹음</label>
-          <label class="check" id="tabAudioField" hidden>
-            <input id="withTabAudio" type="checkbox" /> 읽어주는 음성까지 녹음
-          </label>
-          <label class="check"><input id="cpuMode" type="checkbox" /> GPU 가속 끄기</label>
-
-          <p class="note">
-            음성까지 녹음하려면 공유 창에서 <b>이 탭</b>과 <b>탭 오디오 공유</b>를 선택하세요.
-          </p>
-          <p class="note">영상은 기기 안에서만 처리되며 서버로 전송되지 않습니다.</p>
-          <p id="note" class="diag" hidden></p>
-        </div>
-
+        <!-- 설명은 data-tip으로 단다. 브라우저 기본 툴팁은 1초쯤 기다려야 뜨고
+             생김새도 페이지와 따로 논다. -->
         <div id="bar" class="bar">
-          <button id="btnStart" class="pill primary">카메라 켜기</button>
-          <button id="btnRec" class="ficon" title="녹화" disabled>⏺</button>
-          <button id="btnShot" class="ficon" title="스냅샷" disabled>📷</button>
+          <button id="btnStart" class="ficon primary" data-tip="웹캠 켜기" aria-label="웹캠 켜기">🎥</button>
+          <button id="btnRec" class="ficon" data-tip="녹화" aria-label="녹화" disabled>⏺</button>
+          <button id="btnShot" class="ficon" data-tip="이미지로 저장" aria-label="이미지로 저장" disabled>📷</button>
           <i class="fsep"></i>
-          <button id="btnMore" class="ficon" title="설정">⚙</button>
-          <button id="btnImmersive" class="ficon" title="몰입 모드 (전체 화면)">⛶</button>
+          <button id="btnGpu" class="ficon toggle" data-tip="GPU 가속" aria-label="GPU 가속" aria-pressed="true">⚡</button>
+          <button id="btnImmersive" class="ficon" data-tip="몰입 모드" aria-label="몰입 모드 (전체 화면)">⛶</button>
         </div>
       </section>
     </main>`;
@@ -68,9 +51,7 @@ export function mount(fxId) {
     video: $("video"), canvas: $("canvas"), stage: $("stage"), viewer: $("viewer"),
     statusEl: $("status"), recDot: $("recDot"), recTime: $("recTime"), detectEl: $("detect"),
     btnStart: $("btnStart"), btnRec: $("btnRec"), btnShot: $("btnShot"),
-    btnMore: $("btnMore"), btnImmersive: $("btnImmersive"), pop: $("pop"),
-    zoomEl: $("zoom"), zoomVal: $("zoomVal"),
-    withAudio: $("withAudio"), withTabAudio: $("withTabAudio"),
-    tabAudioField: $("tabAudioField"), cpuModeEl: $("cpuMode"), noteEl: $("note"),
+    btnGpu: $("btnGpu"), btnImmersive: $("btnImmersive"),
+    noteEl: $("note"),
   };
 }
