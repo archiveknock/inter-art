@@ -62,17 +62,34 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ## 5. Branch Workflow
 
-**Develop on `dev`. Release to `main` only when instructed.**
+**Two branches, two releases. `dev` is the preview; `main` is production.**
+
+| Branch | Deploys to | Purpose |
+|---|---|---|
+| `dev` | GitHub Pages (`archiveknock.github.io/inter-art/`) | Preview build — where changes are checked |
+| `main` | Downstream systems | Real release |
 
 Development:
 - All work happens on `dev`. Commit and push there.
 - Never commit directly to `main`.
 - If you find yourself on `main`, switch to `dev` before making changes.
+- **Pushing `dev` publishes the preview site.** It is live and public, not a private
+  branch — don't push half-finished work expecting it to stay unseen.
 
-Release:
-- Merging `dev` into `main` is a release. Perform it ONLY when the user explicitly asks.
-- Don't merge to `main` because a task looks finished, tests pass, or a feature seems complete.
-- When asked to release: verify `dev` is pushed and clean, merge `dev` → `main`, push `main`, then return to `dev`.
+Production release (`dev` → `main`):
+- Merging into `main` triggers the real release and connects to other systems.
+  Perform it ONLY when the user explicitly asks.
+- Don't merge because a task looks finished, tests pass, or a feature seems complete.
+  "It works on the preview" is not the same as "release it."
+- When asked to release: verify `dev` is pushed and clean, merge `dev` → `main`,
+  push `main`, then return to `dev`.
+
+GitHub Pages configuration (don't change without being asked):
+- Pages source branch is `dev`. The `github-pages` environment has a deployment
+  branch policy allowing `dev` only — `main` is deliberately rejected there.
+- If a deploy fails with "Branch is not allowed to deploy to github-pages", the
+  Pages source and that branch policy have drifted apart. Fix the source, not the policy.
+- `.nojekyll` at the repo root keeps Pages from running Jekyll. Leave it in place.
 
 ## 6. Tone & Voice
 
